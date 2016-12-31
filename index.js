@@ -4,6 +4,7 @@ var _ = require('lodash');
 
 const urls = {
     base: 'https://www.kroger.com',
+    clicklist: '/storecatalog/clicklistbeta',
     authenticate: '/user/authenticate',
     favorites: '/storecatalog/clicklistbeta/api/items/personalized/myFavorites',
     recentPurchases: '/storecatalog/clicklistbeta/api/items/personalized/recentPurchases/quick',
@@ -33,12 +34,37 @@ function login(email, password) {
         },
         location: ''
     };
-    // api._jar = request.jar();
-    return post(urls.authenticate, body);
+    api._jar = request.jar();
+    return post(urls.authenticate, body)
+        .then(createCookies)
+        .then(setupOnlineShopping);
+
+    function createCookies(resp) {
+        createStoreCookies(api._jar, resp.store.storeInformation);
+        return resp;
+    }
+
+    function setupOnlineShopping(resp) {
+        // Some crazy Kroger stuff - I wonder if we need to follow all of the redirects?
+        var qs = { redirectUrl: 'https://www.kroger.com/storecatalog/servlet/OnlineShoppingStoreSetup' };
+        return get('/redirect', qs).then(grabXsrfToken);
+        
+        function grabXsrfToken() {
+            // Get the XSRF_TOKEN from cookies so it can be set in the header
+            var xsrfTokenCookie = _.find(api._jar.getCookies('https://www.kroger.com/'), {key: 'XSRF-TOKEN'});
+            if (xsrfTokenCookie) {
+                api._xsrfToken = xsrfTokenCookie.value;
+                console.log('XSRF-TOKEN cookie: ' + api._xsrfToken);
+            } else {
+                throw Error('XSRF-TOKEN cookie not found!')
+            }
+            return resp;
+        }
+    }
 }
 
 function logout() {
-    // api._jar = null;
+    api._jar = null;
 }
 
 function favorites() {
@@ -71,6 +97,8 @@ function addToCart(item, qty) {
             totalPrice: price * qty,
             priceIsYellowTag: item.currentPriceIsYellowTag
         };
+
+        api._jar.setCookie('orderId=' + cart.orderId, urls.base + urls.clicklist);
         
         return _.assignIn(_.cloneDeep(item), addedProps);
     }
@@ -97,7 +125,7 @@ function removeFromCart(itemUpc) {
     }
 }
 
-// ----- Private
+// ----- Internals
 function get(uri, qs) {
     return makeRequest(uri, 'GET', qs);
 }
@@ -111,11 +139,42 @@ function makeRequest(uri, method, qs, body) {
         uri: uri,
         baseUrl: urls.base,
         method: method,
-        jar: true,
+        jar: api._jar,
         json: true,
-        followRedirect: false
+        maxRedirects: 20
     };
+    var headers = {};
     if (qs) options.qs = qs;
     if (body) options.body = body;
+    if (api._xsrfToken) headers['x-xsrf-token'] = api._xsrfToken;
+    options.headers = headers;
     return rp(options);
+}
+
+function createStoreCookies(jar, store) {
+    var uri = 'http://www.kroger.com';
+
+    // From authenticate
+    jar.setCookie('StoreCode=' + store.storeNumber, uri);
+    jar.setCookie('StoreLocalName=' + store.localName, uri);
+    jar.setCookie('StoreAddress=' + addressify(store.address), uri);
+    jar.setCookie('StoreZipCode=' + store.address.zipCode, uri);
+    jar.setCookie('StoreInformation=' + info(store), uri);
+
+    // After picking store
+    jar.setCookie('eCommPickupStore=' + store.storeNumber, uri);
+    jar.setCookie('eCommPickupStoreDivision=' + store.divisionNumber, uri);
+    jar.setCookie('eCommPickupStoreChange=' + store.recordId, uri);
+    jar.setCookie('eCommPickupStoreStreetAddress=' + store.address.addressLineOne, uri);
+    jar.setCookie('eCommPickupStoreCity=' + store.address.city, uri);
+    jar.setCookie('eCommPickupStoreState=' + store.address.state, uri);
+    jar.setCookie('eCommPickupStoreZipCode=' + store.address.zipCode, uri);
+
+    function addressify(address) {
+        return address.addressLineOne + ', ' + address.city + ', ' + address.city;
+    }
+
+    function info(store) {
+        return addressify(store.address) + ',' + store.phoneNumber + ',';
+    }
 }

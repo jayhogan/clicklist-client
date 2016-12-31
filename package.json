@@ -1,23 +1,37 @@
 {
-  "name": "clicklist-api",
+  "name": "clicklist-client",
   "version": "0.1.0",
   "description": "Kroger Clicklist API",
+  "author": "Jay Hogan <seeker136@gmail.com>",
   "main": "index.js",
-  "scripts": {
+    "scripts": {
     "test": "./node_modules/.bin/mocha --reporter spec"
   },
   "keywords": [
     "kroger",
     "clicklist"
   ],
-  "author": "jayhogan",
-  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jayhogan/clicklist-client.git"
+  },
+  "bugs": {
+    "url": "http://github.com/request/clicklist-client/issues"
+  },
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">= 4"
+  },
+  "files": [
+    "index.js"
+  ],
   "dependencies": {
     "lodash": "^4.17.3",
     "request-promise": "^4.1.1"
   },
   "devDependencies": {
     "chai": "^3.5.0",
+    "dotenv": "^2.0.0",
     "mocha": "^3.2.0",
     "request-debug": "^0.2.0"
   }
