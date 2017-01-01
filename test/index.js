@@ -13,9 +13,9 @@ describe('#login', function() {
             .then(resp => {
                 resp.userProfile.emailAddress.should.equal(auth.email);
                 resp.hasErrors.should.equal(false);
+                clicklist.logout();
                 done();
             })
-            .then(() => clicklist.logout())
             .catch(err => done(err));
     });
 
@@ -30,10 +30,10 @@ describe('#favorites', function() {
         clicklist.login(auth.email, auth.pwd)
             .then(resp => clicklist.favorites())
             .then(favorites => {
-                //console.log(favorites);
+                console.log(favorites);
+                clicklist.logout();
                 done();
             })
-            .then(() => clicklist.logout())
             .catch(err => done(err));
     });
 });
@@ -44,24 +44,24 @@ describe('#recent purchases', function() {
         clicklist.login(auth.email, auth.pwd)
             .then(resp => clicklist.recentPurchases())
             .then(recent => {
-                //console.log(recent);
+                console.log(recent);
+                clicklist.logout();
                 done();
             })
-            .then(() => clicklist.logout())
             .catch(err =>done(err));
     });
 });
 
 describe('#cart', function() {
     this.timeout(5000);
-    xit('listing the cart', done => {
+    it('listing the cart', done => {
         clicklist.login(auth.email, auth.pwd)
             .then(resp => clicklist.cart())
             .then(cart => {
-                //console.log(cart);
+                console.log(cart);
+                clicklist.logout();
                 done();
             })
-            .then(() => clicklist.logout())
             .catch(err =>done(err));
     });
 
@@ -75,12 +75,11 @@ describe('#cart', function() {
                 console.log('Adding item: ' + JSON.stringify(item));
                 return clicklist.addToCart(item, 1)
             })
-            .then(resp => clicklist.cart())
-            .then(cart => {
-                console.log(cart);
+            .then(resp => {
+                console.log('Added: ' + resp);
+                clicklist.logout();
                 done();
             })
-            .then(() => clicklist.logout())
-            .catch(err =>done(err));
+            .catch(err => done(err));
     });
 });

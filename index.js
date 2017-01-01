@@ -80,9 +80,13 @@ function cart() {
 }
 
 function addToCart(item, qty) {
+    var newQtyInCart = 0;
     return get(urls.cart)
         .then(buildItem)
-        .then(postDecoratedItem);
+        .then(postDecoratedItem)
+        .then(function() {
+            return { item: item, quantity: newQtyInCart };
+        });
 
     function buildItem(cart) {
         var cartItem = _.find(cart.cartItems, {upc: item.upc}) || {quantity: 0};
@@ -97,6 +101,8 @@ function addToCart(item, qty) {
             totalPrice: price * qty,
             priceIsYellowTag: item.currentPriceIsYellowTag
         };
+
+        newQtyInCart = cartItem.quantity + qty;
 
         api._jar.setCookie('orderId=' + cart.orderId, urls.base + urls.clicklist);
         
