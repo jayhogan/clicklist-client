@@ -1,10 +1,11 @@
 require('dotenv').config();
 
+var winston = require('winston');
+winston.level = 'debug';
+
 var should = require('chai').should(),
     clicklist = require('../index'),
     auth = {email: process.env.USER_NAME, pwd: process.env.PASSWORD };
-
-//require('request-debug')(require('request-promise'));
 
 describe('#login', function() {
     this.timeout(5000);
@@ -30,7 +31,6 @@ describe('#favorites', function() {
         clicklist.login(auth.email, auth.pwd)
             .then(resp => clicklist.favorites())
             .then(favorites => {
-                console.log(favorites);
                 clicklist.logout();
                 done();
             })
@@ -44,7 +44,6 @@ describe('#recent purchases', function() {
         clicklist.login(auth.email, auth.pwd)
             .then(resp => clicklist.recentPurchases())
             .then(recent => {
-                console.log(recent);
                 clicklist.logout();
                 done();
             })
@@ -58,7 +57,6 @@ describe('#cart', function() {
         clicklist.login(auth.email, auth.pwd)
             .then(resp => clicklist.cart())
             .then(cart => {
-                console.log(cart);
                 clicklist.logout();
                 done();
             })
@@ -72,11 +70,9 @@ describe('#cart', function() {
                 return favorites[0];
             })
             .then((item) => {
-                console.log('Adding item: ' + JSON.stringify(item));
                 return clicklist.addToCart(item, 1)
             })
             .then(resp => {
-                console.log('Added: ' + resp);
                 clicklist.logout();
                 done();
             })

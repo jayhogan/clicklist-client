@@ -1,6 +1,13 @@
 var request = require('request');
 var rp = require('request-promise');
 var _ = require('lodash');
+var winston = require('winston');
+
+if (winston.level === 'debug') {
+    require('request-debug')(rp, function(type, data, r) {
+        debug('request', null, {type: type, data: data});
+    });
+}
 
 const urls = {
     base: 'https://www.kroger.com',
@@ -26,6 +33,7 @@ var api = {
 module.exports = api;
 
 function login(email, password) {
+    debug('start', 'login', {email: email, password: password});
     var body = {
         account: {
             email: email,
@@ -34,10 +42,14 @@ function login(email, password) {
         },
         location: ''
     };
+
     api._jar = request.jar();
+
     return post(urls.authenticate, body)
         .then(createCookies)
-        .then(setupOnlineShopping);
+        .then(setupOnlineShopping)
+        .then(logEnd('login'))
+        .catch(logAndThrow('login'));
 
     function createCookies(resp) {
         createStoreCookies(api._jar, resp.store.storeInformation);
@@ -54,9 +66,10 @@ function login(email, password) {
             var xsrfTokenCookie = _.find(api._jar.getCookies('https://www.kroger.com/'), {key: 'XSRF-TOKEN'});
             if (xsrfTokenCookie) {
                 api._xsrfToken = xsrfTokenCookie.value;
-                console.log('XSRF-TOKEN cookie: ' + api._xsrfToken);
+                info('Setting api._xsrfToken to XSRF-TOKEN cookie value', 'login', {token: api._xsrfToken});
             } else {
-                throw Error('XSRF-TOKEN cookie not found!')
+                error('XSRF-TOKEN cookie not found', 'login');
+                throw Error('XSRF-TOKEN cookie not found!');
             }
             return resp;
         }
@@ -68,25 +81,42 @@ function logout() {
 }
 
 function favorites() {
-    return get(urls.favorites);
+    var method = 'favorites';
+    debug('start', method);
+    return get(urls.favorites)
+        .then(logEnd(method))
+        .catch(logAndThrow(method));
 }
 
 function recentPurchases() {
-    return get(urls.recentPurchases);
+    var method = 'recentPurchases';
+    debug('start', method);
+    return get(urls.recentPurchases)
+        .then(logEnd(method))
+        .catch(logAndThrow(method));
 }
 
 function cart() {
-    return get(urls.cart);
+    var method = 'cart';
+    debug('start', method);
+    return get(urls.cart)
+        .then(logEnd(method))
+        .catch(logAndThrow(method));
 }
 
 function addToCart(item, qty) {
+    var method = 'addToCart';
+    debug('start', method, {item: item, qty: qty});
+
     var newQtyInCart = 0;
     return get(urls.cart)
         .then(buildItem)
         .then(postDecoratedItem)
         .then(function() {
             return { item: item, quantity: newQtyInCart };
-        });
+        })
+        .then(logEnd(method))
+        .catch(logAndThrow(method));
 
     function buildItem(cart) {
         var cartItem = _.find(cart.cartItems, {upc: item.upc}) || {quantity: 0};
@@ -115,9 +145,14 @@ function addToCart(item, qty) {
 }
 
 function removeFromCart(itemUpc) {
+    var method = 'removeFromCart';
+    debug('start', method, {itemUpc: itemUpc});
+
     return get(urls.cart)
         .then(findItemInCart)
-        .then(postRemoveItem);
+        .then(postRemoveItem)
+        .then(logEnd(method))
+        .catch(logAndThrow(method));
     
     function findItemInCart(cart) {
         return _.find(cart.cartItems, {upc: itemUpc});
@@ -141,6 +176,8 @@ function post(uri, body) {
 }
 
 function makeRequest(uri, method, qs, body) {
+    debug('start', 'makeRequest', {uri: uri, method: method, qs: qs, body: body});
+
     var options = {
         uri: uri,
         baseUrl: urls.base,
@@ -153,11 +190,17 @@ function makeRequest(uri, method, qs, body) {
     if (qs) options.qs = qs;
     if (body) options.body = body;
     if (api._xsrfToken) headers['x-xsrf-token'] = api._xsrfToken;
+
     options.headers = headers;
+
+    debug('options', 'makeRequest', {options: options});
+
     return rp(options);
 }
 
 function createStoreCookies(jar, store) {
+    debug('start', 'createStoreCookies', {jar: jar, store: store});
+
     var uri = 'http://www.kroger.com';
 
     // From authenticate
@@ -182,5 +225,43 @@ function createStoreCookies(jar, store) {
 
     function info(store) {
         return addressify(store.address) + ',' + store.phoneNumber + ',';
+    }
+
+    debug('end', 'createStoreCookies', {jar: jar, store: store});
+}
+
+function loggingMetadata(method, data) {
+    return {
+        module: 'clicklist-client',
+        filename: 'index.js',
+        method: method,
+        ts: new Date(),
+        data: data
+    };
+}
+
+function debug(msg, method, data) {
+    winston.debug(msg, loggingMetadata(method, data));
+}
+
+function info(msg, method, data) {
+    winston.info(msg, loggingMetadata(method, data));
+}
+
+function error(msg, method, data) {
+    winston.error(msg, loggingMetadata(method, data));
+}
+
+function logEnd(method) {
+    return function(resp) {
+        debug('end', method);
+        return resp;
+    }
+}
+
+function logAndThrow(method) {
+    return function(err) {
+        error(err, method, {err: err});
+        throw err;
     }
 }
