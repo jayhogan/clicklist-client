@@ -92,17 +92,17 @@ function addToCart(item, qty) {
         var cartItem = _.find(cart.cartItems, {upc: item.upc}) || {quantity: 0};
         var price = parseFloat(item.currentPrice);
         var addedProps = {
-            quantityInCart: cartItem.quantity,
+            quantityInCart: parseInt(cartItem.quantity),
             show: true,
             productId: null,
-            quantity: qty,
+            quantity: parseInt(qty),
             allowSubstitutes: true,
             unitPrice: price,
-            totalPrice: price * qty,
+            totalPrice: price * parseInt(qty),
             priceIsYellowTag: item.currentPriceIsYellowTag
         };
 
-        newQtyInCart = cartItem.quantity + qty;
+        newQtyInCart = addedProps.quantityInCart + addedProps.quantity;
 
         api._jar.setCookie('orderId=' + cart.orderId, urls.base + urls.clicklist);
         
