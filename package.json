@@ -1,6 +1,6 @@
 {
   "name": "clicklist-client",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Kroger Clicklist API",
   "author": "Jay Hogan <seeker136@gmail.com>",
   "main": "index.js",
