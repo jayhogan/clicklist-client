@@ -5,7 +5,7 @@
   "author": "Jay Hogan <seeker136@gmail.com>",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/.bin/mocha --reporter spec"
+    "test": "./node_modules/.bin/mocha --reporter spec 'test/index.js' "
   },
   "keywords": [
     "kroger",
@@ -27,8 +27,10 @@
   ],
   "dependencies": {
     "lodash": "^4.17.3",
+    "mocha": "^3.2.0",
+    "request-debug": "^0.2.0",
     "request-promise": "^4.1.1",
-    "request-debug": "^0.2.0"
+    "winston": "^2.3.1"
   },
   "devDependencies": {
     "chai": "^3.5.0",
